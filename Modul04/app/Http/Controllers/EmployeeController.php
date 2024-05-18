@@ -147,6 +147,25 @@ class EmployeeController extends Controller
         $employee->email = $request->email;
         $employee->age = $request->age;
         $employee->position_id = $request->position;
+
+        // Update CV
+        if ($request->hasFile('cv')) {
+            // Delete old CV
+            if ($employee->encrypted_filename) {
+                Storage::delete('public/files/' . $employee->encrypted_filename);
+            }
+
+            // Store new CV
+            $file = $request->file('cv');
+            $originalFilename = $file->getClientOriginalName();
+            $encryptedFilename = $file->hashName();
+            $file->store('public/files');
+
+            // Update employee CV
+            $employee->original_filename = $originalFilename;
+            $employee->encrypted_filename = $encryptedFilename;
+        }
+        
         $employee->save();
 
         return redirect()->route('employees.index');
@@ -157,8 +176,14 @@ class EmployeeController extends Controller
      */
     public function destroy(string $id)
     {
-        // ELOQUENT
-        Employee::find($id)->delete();
+       // ELOQUENT
+        $employee = Employee::find($id);
+
+        // Delete CV file if it exists
+        if ($employee->encrypted_filename) {
+            Storage::delete('public/files/' . $employee->encrypted_filename);
+        }
+        $employee->delete();
         return redirect()->route('employees.index');
     }
 
